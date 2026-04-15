@@ -16,6 +16,7 @@ def get_auth_url() -> str:
         f"?response_type=code"
         f"&client_id={ML_APP_ID}"
         f"&redirect_uri={ML_REDIRECT_URI}"
+        f"&scope=offline_access+read+write"
     )
 
 
