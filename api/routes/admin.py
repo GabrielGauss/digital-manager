@@ -269,7 +269,8 @@ async def import_from_ml(db: AsyncSession = Depends(get_db)):
             params={"limit": 100},
             headers={"Authorization": f"Bearer {access_token}"},
         )
-        logger.info(f"[import-ml] seller_id={seller_id} status={r.status_code} body={r.text[:300]}")
+        logger.info(f"[import-ml] seller_id={seller_id} status={r.status_code} body={r.text[:500]}")
+        stats["debug"] = {"seller_id": seller_id, "ml_status": r.status_code, "ml_body": r.text[:500]}
         r.raise_for_status()
         item_ids = r.json().get("results", [])
 
