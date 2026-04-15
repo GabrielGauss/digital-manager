@@ -1,0 +1,21 @@
+# Secrets & credentials (NEVER commit these)
+.env
+google_credentials.json
+google_token.json
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Logs
+*.log
+server*.log
+
+# IDE
+.vscode/
+.idea/

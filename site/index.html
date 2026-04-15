@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pack Digital Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    header {
+      background: #FFE600;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+    header h1 { font-size: 18px; font-weight: 700; color: #333; }
+    #auth-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    #auth-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+    #auth-dot.ok { background: #00a650; }
+    #auth-btn {
+      background: #3483FA; color: white; border: none;
+      padding: 6px 14px; border-radius: 20px; cursor: pointer;
+      font-size: 13px; font-weight: 600;
+    }
+
+    nav {
+      background: white;
+      border-bottom: 2px solid #FFE600;
+      display: flex;
+      gap: 0;
+    }
+    nav button {
+      background: none; border: none; padding: 14px 28px;
+      cursor: pointer; font-size: 14px; font-weight: 600; color: #666;
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      transition: all .2s;
+    }
+    nav button.active { color: #3483FA; border-bottom-color: #3483FA; }
+    nav button:hover { color: #333; }
+
+    main { max-width: 1200px; margin: 32px auto; padding: 0 24px; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── Cards ── */
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
+    }
+    .card-header h2 { font-size: 18px; }
+
+    /* ── Buttons ── */
+    .btn { padding: 9px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: opacity .2s; }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: #3483FA; color: white; }
+    .btn-success { background: #00a650; color: white; }
+    .btn-warning { background: #f5a623; color: white; }
+    .btn-danger  { background: #e74c3c; color: white; }
+    .btn-outline { background: none; border: 2px solid #3483FA; color: #3483FA; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* ── Grid ── */
+    .bundle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .bundle-card {
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+      overflow: hidden;
+      background: white;
+      transition: box-shadow .2s;
+    }
+    .bundle-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+
+    .bundle-cover {
+      height: 160px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      position: relative;
+      overflow: hidden;
+    }
+    .bundle-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .bundle-cover .no-cover {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; color: rgba(255,255,255,.6); font-size: 40px;
+    }
+
+    .bundle-status {
+      position: absolute; top: 10px; right: 10px;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase;
+    }
+    .status-draft   { background: #f0f2f5; color: #666; }
+    .status-active  { background: #d4f4e2; color: #00a650; }
+    .status-promo   { background: #fff3cd; color: #856404; }
+    .status-paused  { background: #fff3cd; color: #856404; }
+
+    .bundle-body { padding: 16px; }
+    .bundle-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .bundle-meta { font-size: 12px; color: #888; margin-bottom: 10px; }
+    .bundle-price { font-size: 22px; font-weight: 700; color: #00a650; margin-bottom: 14px; }
+    .bundle-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Drive scan ── */
+    .folder-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .folder-item {
+      border: 2px solid #e8e8e8; border-radius: 8px; padding: 16px;
+      cursor: pointer; transition: all .2s;
+    }
+    .folder-item:hover { border-color: #3483FA; background: #f0f6ff; }
+    .folder-item.selected { border-color: #3483FA; background: #e8f0fe; }
+    .folder-icon { font-size: 32px; margin-bottom: 8px; }
+    .folder-name { font-weight: 600; font-size: 14px; }
+    .folder-count { font-size: 12px; color: #888; margin-top: 4px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white; border-radius: 12px; padding: 32px;
+      width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 18px; margin-bottom: 20px; }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #555; }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+      border-radius: 6px; font-size: 14px; outline: none;
+      transition: border-color .2s;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: #3483FA; }
+    .form-group textarea { resize: vertical; min-height: 90px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* ── Orders table ── */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+    th { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; background: #fafafa; }
+    td { font-size: 14px; }
+    tr:hover td { background: #f8f9ff; }
+
+    .badge {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .badge-paid      { background: #d4f4e2; color: #00a650; }
+    .badge-delivered { background: #cfe2ff; color: #0a58ca; }
+    .badge-pending   { background: #fff3cd; color: #856404; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 32px; right: 32px; z-index: 9999;
+      background: #333; color: white; padding: 14px 24px;
+      border-radius: 8px; font-size: 14px; opacity: 0;
+      transform: translateY(16px);
+      transition: all .3s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.error { background: #e74c3c; }
+    #toast.success { background: #00a650; }
+
+    .spinner { display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: white;
+      border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #aaa; }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 16px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🗂️ Pack Digital Manager</h1>
+  <div style="display:flex;gap:16px;align-items:center">
+    <div id="auth-badge">
+      <div id="auth-dot"></div>
+      <span id="auth-label">Verificando...</span>
+    </div>
+    <button id="auth-btn" class="btn btn-primary" onclick="startMLAuth()">Conectar ML</button>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="showSection('bundles')">Mis Bundles</button>
+  <button onclick="showSection('automation')">⚡ Automatización</button>
+  <button onclick="showSection('questions')">Preguntas <span id="q-badge" style="display:none;background:#e74c3c;color:white;font-size:11px;padding:1px 6px;border-radius:10px;margin-left:4px">0</span></button>
+  <button onclick="showSection('calculator')">Calculadora</button>
+  <button onclick="showSection('orders')">Órdenes</button>
+</nav>
+
+<main>
+
+  <!-- ── BUNDLES ── -->
+  <section id="section-bundles" class="section active">
+    <div class="card">
+      <div class="card-header">
+        <h2>Bundles publicados</h2>
+        <button class="btn btn-outline" onclick="loadBundles()">↻ Actualizar</button>
+      </div>
+      <div id="bundles-container">
+        <div class="empty-state"><div class="icon">📦</div><p>Cargando...</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── AUTOMATION ── -->
+  <section id="section-automation" class="section">
+    <div class="card">
+      <div class="card-header">
+        <h2>⚡ Automatización completa</h2>
+      </div>
+      <p style="color:#666;font-size:14px;margin-bottom:24px;line-height:1.7">
+        El sistema escanea tu Google Drive, crea bundles automáticamente y los publica en MercadoLibre.
+        Cuando llega una venta, el email con el link de descarga se envía solo.<br>
+        El sync automático corre cada <strong>6 horas</strong> en segundo plano.
+      </p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+        <div class="card" style="margin:0;border:2px solid #e8e8e8">
+          <div style="font-size:32px;margin-bottom:8px">🔄</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:6px">Sync completo</div>
+          <div style="font-size:13px;color:#666;margin-bottom:16px">
+            Detecta carpetas nuevas en Drive, crea los bundles y los publica en ML automáticamente.
+          </div>
+          <button class="btn btn-success" onclick="runSync(true)" id="btn-sync-full">
+            Sync y publicar ahora
+          </button>
+        </div>
+
+        <div class="card" style="margin:0;border:2px solid #e8e8e8">
+          <div style="font-size:32px;margin-bottom:8px">📋</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:6px">Solo crear borradores</div>
+          <div style="font-size:13px;color:#666;margin-bottom:16px">
+            Detecta carpetas nuevas y crea los bundles como borrador. Revisás antes de publicar.
+          </div>
+          <button class="btn btn-outline" onclick="runSync(false)" id="btn-sync-draft">
+            Crear borradores
+          </button>
+        </div>
+
+        <div class="card" style="margin:0;border:2px solid #e8e8e8">
+          <div style="font-size:32px;margin-bottom:8px">🚀</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:6px">Publicar todos los borradores</div>
+          <div style="font-size:13px;color:#666;margin-bottom:16px">
+            Publica en ML todos los bundles que estén en estado "Borrador".
+          </div>
+          <button class="btn btn-primary" onclick="publishAll()" id="btn-publish-all">
+            Publicar todo
+          </button>
+        </div>
+
+        <div class="card" style="margin:0;border:2px solid #e8e8e8">
+          <div style="font-size:32px;margin-bottom:8px">💰</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:6px">Actualizar precios en ML</div>
+          <div style="font-size:13px;color:#666;margin-bottom:16px">
+            Precio base + 30% descuento de lanzamiento.
+          </div>
+          <div style="font-size:12px;color:#555;line-height:1.8;margin-bottom:14px">
+            ≤10 imgs → $8.000 · ≤20 → $9.000<br>
+            ≤50 imgs → $10.000 · ≤75 → $12.500<br>
+            ≤100 imgs → $15.000 · +100 → $18.000<br>
+            <em style="color:#aaa">Mínimo absoluto: $8.000</em>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="syncPrices()" id="btn-sync-prices">
+            Sincronizar precios → ML
+          </button>
+        </div>
+      </div>
+
+      <!-- Promos -->
+      <div class="card" style="border:2px solid #FFE600;margin-top:0">
+        <div style="font-size:24px;margin-bottom:8px">🏷️ Promos y ofertas</div>
+        <p style="font-size:13px;color:#666;margin-bottom:20px;line-height:1.6">
+          Activá un precio tachado en ML para generar urgencia. El precio original queda visible y el de oferta se destaca.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <select id="promo-discount" style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+            <option value="0.20">20% off</option>
+            <option value="0.30">30% off</option>
+            <option value="0.40">40% off</option>
+            <option value="0.50">50% off</option>
+          </select>
+          <button class="btn btn-warning" onclick="runPromoAll(true)" id="btn-promo-start">
+            🏷️ Activar promo en todos
+          </button>
+          <button class="btn btn-outline" onclick="runPromoAll(false)" id="btn-promo-end">
+            ✕ Terminar promo
+          </button>
+        </div>
+        <div id="promo-log" style="display:none;background:#fffbe6;border:1px solid #FFE600;padding:14px;border-radius:6px;font-size:13px;color:#555;white-space:pre-wrap"></div>
+      </div>
+
+      <!-- Combo packs -->
+      <div class="card" style="border:2px solid #3483FA;margin-top:0">
+        <div style="font-size:24px;margin-bottom:8px">📦 Combo / Mega Pack</div>
+        <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6">
+          Combiná 2 o más bundles en un mega pack con 35% de descuento sobre el precio base total.
+        </p>
+        <div style="margin-bottom:12px;font-size:13px;font-weight:600">Seleccioná los bundles a combinar:</div>
+        <div id="combo-bundle-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;min-height:40px;padding:12px;background:#f8f9fa;border-radius:6px">
+          <span style="color:#aaa;font-size:13px">Cargando bundles...</span>
+        </div>
+        <button class="btn btn-primary" onclick="createCombo()" id="btn-combo">
+          ✨ Crear Mega Pack
+        </button>
+        <div id="combo-log" style="display:none;margin-top:12px;background:#e8f4fd;border:1px solid #3483FA;padding:14px;border-radius:6px;font-size:13px;color:#333;white-space:pre-wrap"></div>
+      </div>
+
+      <div id="sync-log" style="display:none;background:#1a1a2e;color:#00ff88;padding:20px;border-radius:8px;font-family:monospace;font-size:13px;line-height:1.8;white-space:pre-wrap"></div>
+    </div>
+  </section>
+
+  <!-- ── CREATE ── -->
+  <section id="section-create" class="section">
+    <div class="card">
+      <div class="card-header">
+        <h2>Crear nuevo bundle</h2>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <p style="font-size:14px;color:#666;margin-bottom:16px">
+          Paso 1: Seleccioná una carpeta de tu Google Drive
+        </p>
+        <button class="btn btn-outline" onclick="scanDrive()" id="scan-btn">
+          📁 Escanear Drive
+        </button>
+        <div id="folder-list" style="margin-top:16px"></div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #f0f0f0;margin:24px 0">
+
+      <p style="font-size:14px;color:#666;margin-bottom:16px">Paso 2: Completá los datos del bundle</p>
+
+      <form id="bundle-form" onsubmit="createBundle(event)">
+        <div class="form-group">
+          <label>Nombre del bundle *</label>
+          <input type="text" id="f-name" required placeholder="Ej: Mega Pack Bauhaus - 51 Imágenes">
+        </div>
+        <div class="form-group">
+          <label>Descripción *</label>
+          <textarea id="f-description" required placeholder="Describí el contenido, estilo, resolución, formatos..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Precio (ARS) *</label>
+            <input type="number" id="f-price" required min="1" placeholder="2500">
+          </div>
+          <div class="form-group">
+            <label>Cantidad de imágenes</label>
+            <input type="number" id="f-count" placeholder="51">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ID de carpeta Drive *</label>
+          <input type="text" id="f-folder-id" required placeholder="1gJDz9ehwu2p3pm64eNg7hjGKXKc439NV">
+        </div>
+        <div class="form-group">
+          <label>URL de imagen de portada (opcional)</label>
+          <input type="text" id="f-cover" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Tags (separados por coma)</label>
+          <input type="text" id="f-tags" placeholder="bauhaus, arte, minimalismo, imprimir">
+        </div>
+        <button type="submit" class="btn btn-success">Crear bundle</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ── QUESTIONS ── -->
+  <section id="section-questions" class="section">
+    <div class="card">
+      <div class="card-header">
+        <h2>Preguntas de compradores</h2>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-outline" onclick="loadQuestions()">↻ Actualizar</button>
+          <button class="btn btn-success" onclick="autoAnswerAll()" id="btn-auto-answer">
+            Responder automáticamente
+          </button>
+        </div>
+      </div>
+
+      <div style="background:#fffbe6;border:1.5px solid #FFE600;border-radius:8px;
+                  padding:12px 16px;font-size:13px;color:#666;margin-bottom:20px;line-height:1.7">
+        <strong style="color:#1a1a1a">Auto-responder activo</strong> —
+        Las preguntas sobre <em>envío, descarga y contenido</em> se responden solas cuando llega la notificación de ML.
+        Las de precio se dejan para revisión manual. También podés responder cualquiera acá abajo.
+      </div>
+
+      <div id="questions-container">
+        <div class="empty-state"><div class="icon">💬</div><p>Cargando preguntas...</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CALCULATOR ── -->
+  <section id="section-calculator" class="section">
+    <div class="card">
+      <div class="card-header">
+        <h2>Calculadora de rentabilidad</h2>
+        <span style="font-size:12px;color:#888;background:#f0f2f5;padding:4px 10px;border-radius:20px">
+          gold_pro · sin cuotas · cargo 14.3%
+        </span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+
+        <!-- Left: inputs -->
+        <div>
+          <div style="margin-bottom:24px">
+            <label style="font-size:13px;font-weight:600;color:#666;display:block;margin-bottom:8px">
+              PRECIO DE VENTA (ARS)
+            </label>
+            <input type="range" id="calc-slider" min="8000" max="30000" step="500" value="15000"
+                   oninput="calcUpdate()"
+                   style="width:100%;accent-color:#FFE600;height:6px;margin-bottom:8px">
+            <input type="number" id="calc-price" value="15000" min="8000" step="500"
+                   oninput="calcUpdate()"
+                   style="width:100%;padding:10px 14px;border:2px solid #FFE600;border-radius:8px;
+                          font-size:22px;font-weight:800;text-align:center;color:#1a1a1a">
+          </div>
+
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:600;color:#666;display:block;margin-bottom:8px">
+              CANTIDAD DE IMÁGENES (para referencia)
+            </label>
+            <select id="calc-imgs" onchange="calcSuggest()"
+                    style="width:100%;padding:10px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:14px">
+              <option value="10">hasta 10 imágenes</option>
+              <option value="20">hasta 20 imágenes</option>
+              <option value="50">hasta 50 imágenes</option>
+              <option value="75">hasta 75 imágenes</option>
+              <option value="100" selected>hasta 100 imágenes</option>
+              <option value="999">+100 imágenes</option>
+            </select>
+          </div>
+
+          <div style="background:#fffbe6;border:1.5px solid #FFE600;border-radius:8px;padding:14px;font-size:13px;color:#666;line-height:1.7">
+            <strong style="color:#1a1a1a">Precios base recomendados</strong><br>
+            ≤10 imgs → $8.000 · ≤20 → $9.000<br>
+            ≤50 imgs → $10.000 · ≤75 → $12.500<br>
+            ≤100 imgs → $15.000 · +100 → $18.000
+          </div>
+        </div>
+
+        <!-- Right: results -->
+        <div>
+          <div style="background:#1a1a1a;border-radius:12px;padding:24px;color:white;margin-bottom:16px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#888;margin-bottom:20px">
+              DESGLOSE POR VENTA
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                        padding:10px 0;border-bottom:1px solid #333">
+              <span style="font-size:14px;color:#ccc">Precio al comprador</span>
+              <span id="r-price" style="font-size:16px;font-weight:700;color:#FFE600">$15.000</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                        padding:10px 0;border-bottom:1px solid #333">
+              <div>
+                <div style="font-size:14px;color:#ccc">Cargo ML (gold_pro)</div>
+                <div style="font-size:11px;color:#555">14,3% de la venta</div>
+              </div>
+              <span id="r-ml-fee" style="font-size:15px;font-weight:600;color:#e74c3c">−$2.145</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                        padding:10px 0;border-bottom:1px solid #333">
+              <div>
+                <div style="font-size:14px;color:#ccc">Cuotas / financiamiento</div>
+                <div style="font-size:11px;color:#555">immediate_payment activo</div>
+              </div>
+              <span style="font-size:15px;font-weight:600;color:#00a650">$0</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                        padding:10px 0;border-bottom:1px solid #333">
+              <div>
+                <div style="font-size:14px;color:#ccc">Costo del producto</div>
+                <div style="font-size:11px;color:#555">producto digital</div>
+              </div>
+              <span style="font-size:15px;font-weight:600;color:#00a650">$0</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px">
+              <span style="font-size:16px;font-weight:700;color:white">Recibís</span>
+              <span id="r-net" style="font-size:26px;font-weight:800;color:#FFE600">$12.855</span>
+            </div>
+          </div>
+
+          <!-- Margin bar -->
+          <div style="background:#f8f9fa;border-radius:10px;padding:18px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+              <span style="font-size:13px;font-weight:600;color:#666">Margen neto</span>
+              <span id="r-margin" style="font-size:16px;font-weight:800;color:#00a650">85,7%</span>
+            </div>
+            <div style="background:#e0e0e0;border-radius:999px;height:10px;overflow:hidden">
+              <div id="r-bar" style="height:100%;background:#00a650;border-radius:999px;
+                                     width:85.7%;transition:width .3s,background .3s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:#aaa">
+              <span>0%</span><span>50%</span><span>100%</span>
+            </div>
+          </div>
+
+          <!-- Monthly projection -->
+          <div style="background:#f8f9fa;border-radius:10px;padding:18px;margin-top:14px">
+            <div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#888;margin-bottom:12px">
+              PROYECCIÓN (estimada)
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+              <div style="background:white;border-radius:8px;padding:12px">
+                <div style="font-size:11px;color:#888;margin-bottom:4px">5 ventas/mes</div>
+                <div id="r-5" style="font-size:16px;font-weight:800;color:#1a1a1a">$64.275</div>
+              </div>
+              <div style="background:white;border-radius:8px;padding:12px">
+                <div style="font-size:11px;color:#888;margin-bottom:4px">20 ventas/mes</div>
+                <div id="r-20" style="font-size:16px;font-weight:800;color:#1a1a1a">$257.100</div>
+              </div>
+              <div style="background:white;border-radius:8px;padding:12px">
+                <div style="font-size:11px;color:#888;margin-bottom:4px">50 ventas/mes</div>
+                <div id="r-50" style="font-size:16px;font-weight:800;color:#1a1a1a">$642.750</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price comparison table -->
+      <div style="margin-top:28px">
+        <div style="font-size:12px;font-weight:700;letter-spacing:1px;color:#888;margin-bottom:14px">
+          COMPARATIVA DE PRECIOS VS RECIBÍS (sin cuotas)
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead>
+              <tr style="background:#f8f9fa">
+                <th style="padding:10px 14px;text-align:left;color:#888;font-weight:600;font-size:12px">PRECIO</th>
+                <th style="padding:10px 14px;text-align:right;color:#888;font-weight:600;font-size:12px">CARGO ML (14,3%)</th>
+                <th style="padding:10px 14px;text-align:right;color:#888;font-weight:600;font-size:12px">RECIBÍS</th>
+                <th style="padding:10px 14px;text-align:right;color:#888;font-weight:600;font-size:12px">MARGEN</th>
+              </tr>
+            </thead>
+            <tbody id="calc-table">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ORDERS ── -->
+  <section id="section-orders" class="section">
+    <div class="card">
+      <div class="card-header">
+        <h2>Órdenes recibidas</h2>
+        <button class="btn btn-outline" onclick="loadOrders()">↻ Actualizar</button>
+      </div>
+      <div id="orders-container">
+        <div class="empty-state"><div class="icon">🧾</div><p>Cargando...</p></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const API = 'http://localhost:8001';
+let selectedFolder = null;
+
+// ── Nav ──────────────────────────────────────────────────────────────────────
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`section-${name}`).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'bundles') loadBundles();
+  if (name === 'orders') loadOrders();
+  if (name === 'questions') loadQuestions();
+  if (name === 'calculator') { buildCalcTable(); calcUpdate(); }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 3000);
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const r = await fetch(`${API}/auth/ml/status`);
+    const d = await r.json();
+    const dot = document.getElementById('auth-dot');
+    const label = document.getElementById('auth-label');
+    const btn = document.getElementById('auth-btn');
+    if (d.status === 'authenticated') {
+      dot.className = 'ok';
+      label.textContent = 'ML conectado';
+      btn.style.display = 'none';
+    } else {
+      dot.className = '';
+      label.textContent = 'ML desconectado';
+      btn.style.display = 'block';
+    }
+  } catch {}
+}
+
+function startMLAuth() {
+  window.open(`${API}/auth/ml`, '_blank', 'width=600,height=700');
+}
+
+// ── Bundles ───────────────────────────────────────────────────────────────────
+async function loadBundles() {
+  const container = document.getElementById('bundles-container');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(`${API}/bundles/`);
+    const bundles = await r.json();
+    if (!bundles.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">📦</div><p>No hay bundles aún. Creá el primero.</p></div>';
+      return;
+    }
+    container.innerHTML = `<div class="bundle-grid">${bundles.map(bundleCard).join('')}</div>`;
+  } catch(e) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>Error al cargar bundles</p></div>';
+  }
+}
+
+function bundleCard(b) {
+  const statusClass = `status-${b.ml_status}`;
+  const statusLabel = { draft: 'Borrador', active: 'Activo', paused: 'Pausado', closed: 'Cerrado', promo: '🏷️ Promo' }[b.ml_status] || b.ml_status;
+  const cover = b.cover_image_url
+    ? `<img src="${b.cover_image_url}" alt="${b.name}">`
+    : `<div class="no-cover">🖼️</div>`;
+
+  const mlBtn = b.ml_status === 'draft'
+    ? `<button class="btn btn-success btn-sm" onclick="publishBundle(${b.id})">Publicar en ML</button>`
+    : b.ml_status === 'active'
+    ? `<button class="btn btn-warning btn-sm" onclick="startBundlePromo(${b.id})">🏷️ Promo</button>`
+    : b.ml_status === 'promo'
+    ? `<button class="btn btn-outline btn-sm" onclick="endBundlePromo(${b.id})">✕ Fin promo</button>`
+    : '';
+
+  const mlLink = b.ml_item_id
+    ? `<a href="https://www.mercadolibre.com.ar/p/${b.ml_item_id}" target="_blank" class="btn btn-outline btn-sm">Ver en ML</a>`
+    : '';
+
+  return `
+  <div class="bundle-card">
+    <div class="bundle-cover">
+      ${cover}
+      <span class="bundle-status ${statusClass}">${statusLabel}</span>
+    </div>
+    <div class="bundle-body">
+      <div class="bundle-name">${b.name}</div>
+      <div class="bundle-meta">${b.image_count || '?'} imágenes · ${b.tags || ''}</div>
+      <div class="bundle-price">$${b.price?.toLocaleString('es-AR')}</div>
+      <div class="bundle-actions">
+        ${mlBtn}
+        ${mlLink}
+        <a href="${b.drive_folder_url}" target="_blank" class="btn btn-outline btn-sm">Drive</a>
+        <button class="btn btn-danger btn-sm" onclick="deleteBundle(${b.id})">✕</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function startBundlePromo(id) {
+  const discount = prompt('Descuento (0.20 = 20%, 0.30 = 30%, etc):', '0.20');
+  if (!discount) return;
+  try {
+    const r = await fetch(`${API}/admin/promo/${id}/start?discount=${discount}`, { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) { toast(`Promo activa: $${d.original_price?.toLocaleString('es-AR')} → $${d.promo_price?.toLocaleString('es-AR')}`, 'success'); loadBundles(); }
+    else { toast('Error: ' + d.error, 'error'); }
+  } catch { toast('Error al activar promo', 'error'); }
+}
+
+async function endBundlePromo(id) {
+  try {
+    const r = await fetch(`${API}/admin/promo/${id}/end`, { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) { toast(`Promo terminada. Precio restaurado: $${d.price?.toLocaleString('es-AR')}`, 'success'); loadBundles(); }
+    else { toast('Error: ' + d.error, 'error'); }
+  } catch { toast('Error al terminar promo', 'error'); }
+}
+
+async function publishBundle(id) {
+  if (!confirm('¿Publicar este bundle en MercadoLibre?')) return;
+  try {
+    const r = await fetch(`${API}/bundles/${id}/publish`, { method: 'POST' });
+    const d = await r.json();
+    if (r.ok) {
+      toast('¡Bundle publicado en ML! ' + (d.ml_item_id || ''), 'success');
+      loadBundles();
+    } else {
+      toast('Error: ' + d.detail, 'error');
+    }
+  } catch(e) {
+    toast('Error al publicar', 'error');
+  }
+}
+
+async function pauseBundle(id) {
+  try {
+    await fetch(`${API}/bundles/${id}/pause`, { method: 'POST' });
+    toast('Bundle pausado', 'success');
+    loadBundles();
+  } catch {
+    toast('Error al pausar', 'error');
+  }
+}
+
+async function deleteBundle(id) {
+  if (!confirm('¿Eliminar este bundle? No elimina la publicación de ML.')) return;
+  await fetch(`${API}/bundles/${id}`, { method: 'DELETE' });
+  toast('Bundle eliminado');
+  loadBundles();
+}
+
+// ── Drive scan ────────────────────────────────────────────────────────────────
+async function scanDrive() {
+  const btn = document.getElementById('scan-btn');
+  const container = document.getElementById('folder-list');
+  btn.innerHTML = '<span class="spinner"></span> Escaneando...';
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API}/bundles/drive/scan`);
+    const d = await r.json();
+    const folders = d.folders || [];
+    if (!folders.length) {
+      container.innerHTML = '<p style="color:#888">No se encontraron carpetas en el Drive.</p>';
+      return;
+    }
+    container.innerHTML = `<div class="folder-list">${folders.map(folderItem).join('')}</div>`;
+  } catch(e) {
+    container.innerHTML = '<p style="color:#e74c3c">Error al leer Drive. ¿Autenticaste con Google?</p>';
+  } finally {
+    btn.innerHTML = '📁 Escanear Drive';
+    btn.disabled = false;
+  }
+}
+
+function folderItem(f) {
+  return `
+  <div class="folder-item" onclick="selectFolder(this, '${f.id}', '${f.name.replace(/'/g,"\\'")}', ${f.image_count}, '${f.url}')">
+    <div class="folder-icon">📁</div>
+    <div class="folder-name">${f.name}</div>
+    <div class="folder-count">${f.image_count} imágenes</div>
+  </div>`;
+}
+
+function selectFolder(el, id, name, count, url) {
+  document.querySelectorAll('.folder-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedFolder = { id, name, count, url };
+  document.getElementById('f-folder-id').value = id;
+  document.getElementById('f-count').value = count;
+  if (!document.getElementById('f-name').value) {
+    document.getElementById('f-name').value = `Mega Pack ${name} - ${count} Imágenes para Imprimir`;
+  }
+}
+
+// ── Create bundle ─────────────────────────────────────────────────────────────
+async function createBundle(e) {
+  e.preventDefault();
+  const payload = {
+    name: document.getElementById('f-name').value,
+    description: document.getElementById('f-description').value,
+    price: parseFloat(document.getElementById('f-price').value),
+    drive_folder_id: document.getElementById('f-folder-id').value,
+    image_count: parseInt(document.getElementById('f-count').value) || 0,
+    cover_image_url: document.getElementById('f-cover').value || null,
+    tags: document.getElementById('f-tags').value || null,
+  };
+  try {
+    const r = await fetch(`${API}/bundles/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      toast('Bundle creado exitosamente', 'success');
+      document.getElementById('bundle-form').reset();
+      selectedFolder = null;
+      document.querySelectorAll('.folder-item').forEach(i => i.classList.remove('selected'));
+      showSection('bundles');
+    } else {
+      toast('Error: ' + JSON.stringify(d.detail), 'error');
+    }
+  } catch(err) {
+    toast('Error al crear bundle', 'error');
+  }
+}
+
+// ── Orders ────────────────────────────────────────────────────────────────────
+async function loadOrders() {
+  const container = document.getElementById('orders-container');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(`${API}/orders/`);
+    const orders = await r.json();
+    if (!orders.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">🧾</div><p>Todavía no hay órdenes</p></div>';
+      return;
+    }
+    container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Orden ML</th><th>Comprador</th><th>Email</th>
+          <th>Monto</th><th>Estado</th><th>Email enviado</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${orders.map(orderRow).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>Error al cargar órdenes</p></div>';
+  }
+}
+
+function orderRow(o) {
+  const badgeClass = { paid: 'badge-paid', delivered: 'badge-delivered', pending: 'badge-pending' }[o.status] || 'badge-pending';
+  const statusLabel = { paid: 'Pagada', delivered: 'Entregada', pending: 'Pendiente', cancelled: 'Cancelada' }[o.status] || o.status;
+  const emailStatus = o.email_sent ? '✅ Enviado' : '⏳ Pendiente';
+  const resendBtn = !o.email_sent
+    ? `<button class="btn btn-primary btn-sm" onclick="resendEmail(${o.id})">Reenviar</button>`
+    : '';
+  return `
+  <tr>
+    <td><code>${o.ml_order_id}</code></td>
+    <td>${o.buyer_nickname || '-'}</td>
+    <td>${o.buyer_email || '-'}</td>
+    <td>$${o.amount?.toLocaleString('es-AR') || '-'}</td>
+    <td><span class="badge ${badgeClass}">${statusLabel}</span></td>
+    <td>${emailStatus}</td>
+    <td>${resendBtn}</td>
+  </tr>`;
+}
+
+async function resendEmail(id) {
+  try {
+    const r = await fetch(`${API}/orders/${id}/resend-email`, { method: 'POST' });
+    const d = await r.json();
+    if (r.ok) { toast('Email reenviado a ' + d.to, 'success'); loadOrders(); }
+    else { toast('Error: ' + d.detail, 'error'); }
+  } catch { toast('Error al reenviar', 'error'); }
+}
+
+// ── Automation ───────────────────────────────────────────────────────────────
+async function runSync(autoPublish) {
+  const btnId = autoPublish ? 'btn-sync-full' : 'btn-sync-draft';
+  const btn = document.getElementById(btnId);
+  const log = document.getElementById('sync-log');
+  btn.innerHTML = '<span class="spinner"></span> Sincronizando...';
+  btn.disabled = true;
+  log.style.display = 'block';
+  log.textContent = '▶ Iniciando sync con Google Drive...\n';
+  try {
+    const r = await fetch(`${API}/admin/sync/now?auto_publish=${autoPublish}`, { method: 'POST' });
+    const d = await r.json();
+    const s = d.stats || {};
+    log.textContent += `✅ Sync completado\n`;
+    log.textContent += `   Bundles creados:   ${s.created ?? 0}\n`;
+    log.textContent += `   Publicados en ML:  ${s.published ?? 0}\n`;
+    log.textContent += `   Ya existían:       ${s.skipped ?? 0}\n`;
+    if (s.errors?.length) {
+      log.textContent += `⚠️  Errores:\n`;
+      s.errors.forEach(e => log.textContent += `   - ${e}\n`);
+    }
+    toast(`Sync listo — ${s.created ?? 0} creados, ${s.published ?? 0} publicados`, 'success');
+    loadBundles();
+  } catch(e) {
+    log.textContent += `❌ Error: ${e.message}\n`;
+    toast('Error en sync', 'error');
+  } finally {
+    btn.innerHTML = autoPublish ? 'Sync y publicar ahora' : 'Crear borradores';
+    btn.disabled = false;
+  }
+}
+
+async function publishAll() {
+  const btn = document.getElementById('btn-publish-all');
+  btn.innerHTML = '<span class="spinner"></span> Publicando...';
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API}/admin/publish-all`, { method: 'POST' });
+    const d = await r.json();
+    toast(`${d.stats?.published ?? 0} bundles publicados en ML`, 'success');
+    loadBundles();
+  } catch { toast('Error al publicar', 'error'); }
+  finally { btn.innerHTML = 'Publicar todo'; btn.disabled = false; }
+}
+
+// ── Questions ─────────────────────────────────────────────────────────────────
+async function loadQuestions() {
+  const container = document.getElementById('questions-container');
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(`${API}/admin/questions`);
+    const questions = await r.json();
+    if (!r.ok) throw new Error(JSON.stringify(questions));
+
+    const unanswered = questions.filter(q => q.status === 'UNANSWERED');
+    const badge = document.getElementById('q-badge');
+    if (unanswered.length > 0) {
+      badge.style.display = 'inline';
+      badge.textContent = unanswered.length;
+    } else {
+      badge.style.display = 'none';
+    }
+
+    if (!questions.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>No hay preguntas recientes.</p></div>';
+      return;
+    }
+    container.innerHTML = questions.map(questionCard).join('');
+  } catch(e) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Error: ${e.message}</p></div>`;
+  }
+}
+
+function questionCard(q) {
+  const isUnanswered = q.status === 'UNANSWERED';
+  const statusBadge = isUnanswered
+    ? '<span style="background:#fff3cd;color:#856404;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600">Sin responder</span>'
+    : '<span style="background:#d4f4e2;color:#00a650;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600">Respondida</span>';
+
+  const catColors = {shipping:'#3483FA', download:'#00a650', content:'#9b59b6', price:'#e67e22', other:'#aaa'};
+  const catLabels = {shipping:'Envío', download:'Descarga', content:'Contenido', price:'Precio', other:'Otro'};
+  const catBadge = q.category ? `<span style="background:${catColors[q.category]}20;color:${catColors[q.category]};
+    padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin-left:6px">
+    ${catLabels[q.category] || q.category}</span>` : '';
+
+  const itemLabel = q.item_name && q.item_name !== q.item_id
+    ? `<div style="font-size:11px;color:#888;margin-bottom:8px">📦 ${q.item_name.slice(0,50)}</div>` : '';
+
+  const answerSection = q.answer
+    ? `<div style="margin-top:12px;padding:10px 14px;background:#f0fff4;border-left:3px solid #00a650;border-radius:0 6px 6px 0;font-size:13px;color:#444">
+         <strong style="color:#00a650;font-size:11px">RESPUESTA:</strong><br>${q.answer}
+       </div>`
+    : q.suggested_answer
+    ? `<div style="margin-top:12px">
+         <div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px;text-transform:uppercase">
+           Sugerida por el sistema:
+         </div>
+         <div id="ans-${q.id}" style="background:#f8f9fa;border-radius:6px;padding:10px 14px;
+              font-size:13px;color:#444;line-height:1.5;margin-bottom:8px;white-space:pre-wrap">${q.suggested_answer}</div>
+         <div style="display:flex;gap:8px">
+           <button class="btn btn-success btn-sm" onclick="sendAnswer(${q.id}, '${escapeStr(q.suggested_answer)}')">
+             Enviar respuesta sugerida
+           </button>
+           <button class="btn btn-outline btn-sm" onclick="editAnswer(${q.id})">Editar</button>
+         </div>
+       </div>`
+    : `<div style="margin-top:12px">
+         <textarea id="ans-${q.id}" rows="3" placeholder="Escribí tu respuesta..."
+                   style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:6px;font-size:13px;resize:vertical"></textarea>
+         <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="sendManualAnswer(${q.id})">
+           Enviar respuesta
+         </button>
+       </div>`;
+
+  const date = q.date_created ? new Date(q.date_created).toLocaleDateString('es-AR', {
+    day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
+
+  return `
+  <div style="border:1.5px solid ${isUnanswered ? '#FFE600' : '#e8e8e8'};border-radius:10px;
+              padding:16px;margin-bottom:14px;background:${isUnanswered ? '#fffbe6' : 'white'}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        ${statusBadge}${catBadge}
+        <span style="font-size:12px;color:#aaa">${date}</span>
+      </div>
+    </div>
+    ${itemLabel}
+    <div style="font-size:15px;color:#1a1a1a;line-height:1.5;margin-bottom:4px">"${q.text}"</div>
+    ${isUnanswered ? answerSection : (q.answer ? `<div style="margin-top:12px;padding:10px 14px;background:#f0fff4;border-left:3px solid #00a650;border-radius:0 6px 6px 0;font-size:13px;color:#444">${q.answer}</div>` : '')}
+  </div>`;
+}
+
+function escapeStr(s) {
+  return (s || '').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+}
+
+function editAnswer(id) {
+  const el = document.getElementById(`ans-${id}`);
+  const text = el.textContent;
+  el.outerHTML = `<textarea id="ans-${id}" rows="4"
+    style="width:100%;padding:10px;border:1.5px solid #3483FA;border-radius:6px;font-size:13px;resize:vertical"
+    >${text}</textarea>`;
+}
+
+async function sendAnswer(questionId, text) {
+  const ans = document.getElementById(`ans-${questionId}`);
+  const finalText = (ans && ans.tagName === 'TEXTAREA') ? ans.value : text;
+  if (!finalText.trim()) return;
+  try {
+    const r = await fetch(`${API}/admin/questions/${questionId}/answer?text=${encodeURIComponent(finalText)}`, { method:'POST' });
+    const d = await r.json();
+    if (d.ok) { toast('Respuesta enviada ✓', 'success'); loadQuestions(); }
+    else { toast('Error al responder', 'error'); }
+  } catch { toast('Error de conexión', 'error'); }
+}
+
+async function sendManualAnswer(questionId) {
+  const ans = document.getElementById(`ans-${questionId}`);
+  if (!ans || !ans.value.trim()) { toast('Escribí una respuesta', 'error'); return; }
+  await sendAnswer(questionId, ans.value);
+}
+
+async function autoAnswerAll() {
+  const btn = document.getElementById('btn-auto-answer');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Respondiendo...';
+  try {
+    const r = await fetch(`${API}/admin/questions/auto-answer`, { method:'POST' });
+    const d = await r.json();
+    const s = d.stats || {};
+    toast(`${s.answered || 0} respondidas, ${s.skipped || 0} omitidas`, 'success');
+    loadQuestions();
+  } catch { toast('Error', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = 'Responder automáticamente'; }
+}
+
+// ── Price sync ────────────────────────────────────────────────────────────────
+async function syncPrices() {
+  const btn = document.getElementById('btn-sync-prices');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const r = await fetch(`${API}/admin/sync-prices`, { method:'POST' });
+    const d = await r.json();
+    const s = d.stats || {};
+    const msg = `Precios: ${s.updated || 0} actualizados, ${s.skipped || 0} sin cambios`;
+    if (s.errors?.length) toast(msg + ` (${s.errors.length} errores)`, 'error');
+    else toast(msg, 'success');
+    loadBundles();
+  } catch { toast('Error al sincronizar precios', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = 'Sincronizar precios → ML'; }
+}
+
+// ── Calculator ────────────────────────────────────────────────────────────────
+const ML_FEE_RATE = 0.143;  // gold_pro commission
+const PRICE_TIERS = [
+  [10, 8000], [20, 9000], [50, 10000], [75, 12500], [100, 15000], [999, 18000]
+];
+
+function fmt(n) {
+  return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+function calcUpdate() {
+  const slider = document.getElementById('calc-slider');
+  const input  = document.getElementById('calc-price');
+  // Sync slider ↔ input
+  if (event.target === slider) input.value = slider.value;
+  else slider.value = input.value;
+
+  const price = Math.max(8000, parseFloat(input.value) || 15000);
+  const fee   = price * ML_FEE_RATE;
+  const net   = price - fee;
+  const margin = (net / price) * 100;
+  const barColor = margin > 70 ? '#00a650' : margin > 50 ? '#FFE600' : '#e74c3c';
+
+  document.getElementById('r-price').textContent   = fmt(price);
+  document.getElementById('r-ml-fee').textContent  = '−' + fmt(fee);
+  document.getElementById('r-net').textContent     = fmt(net);
+  document.getElementById('r-margin').textContent  = margin.toFixed(1) + '%';
+  document.getElementById('r-margin').style.color  = barColor;
+  document.getElementById('r-bar').style.width     = margin + '%';
+  document.getElementById('r-bar').style.background = barColor;
+  document.getElementById('r-5').textContent       = fmt(net * 5);
+  document.getElementById('r-20').textContent      = fmt(net * 20);
+  document.getElementById('r-50').textContent      = fmt(net * 50);
+}
+
+function calcSuggest() {
+  const imgs = parseInt(document.getElementById('calc-imgs').value);
+  const tier = PRICE_TIERS.find(([t]) => imgs <= t);
+  const suggested = tier ? tier[1] : 18000;
+  document.getElementById('calc-price').value = suggested;
+  document.getElementById('calc-slider').value = suggested;
+  calcUpdate();
+}
+
+function buildCalcTable() {
+  const rows = [8000, 9000, 10000, 12500, 15000, 18000, 20000, 25000];
+  const tbody = document.getElementById('calc-table');
+  if (!tbody) return;
+  tbody.innerHTML = rows.map((price, i) => {
+    const fee = price * ML_FEE_RATE;
+    const net = price - fee;
+    const margin = ((net / price) * 100).toFixed(1);
+    const bg = i % 2 === 0 ? 'white' : '#fafafa';
+    const netColor = net >= 12000 ? '#00a650' : net >= 8000 ? '#856404' : '#333';
+    return `<tr style="background:${bg}">
+      <td style="padding:10px 14px;font-weight:700">${fmt(price)}</td>
+      <td style="padding:10px 14px;text-align:right;color:#e74c3c">−${fmt(fee)}</td>
+      <td style="padding:10px 14px;text-align:right;font-weight:800;color:${netColor}">${fmt(net)}</td>
+      <td style="padding:10px 14px;text-align:right;color:#666">${margin}%</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Promos ────────────────────────────────────────────────────────────────────
+async function runPromoAll(start) {
+  const log = document.getElementById('promo-log');
+  const discount = document.getElementById('promo-discount').value;
+  const btnId = start ? 'btn-promo-start' : 'btn-promo-end';
+  const btn = document.getElementById(btnId);
+  btn.disabled = true;
+  log.style.display = 'block';
+  log.textContent = start ? `▶ Activando promo (${Math.round(discount*100)}% off)...\n` : '▶ Terminando promo...\n';
+  try {
+    const url = start
+      ? `${API}/admin/promo/all/start?discount=${discount}`
+      : `${API}/admin/promo/all/end`;
+    const r = await fetch(url, { method: 'POST' });
+    const d = await r.json();
+    const s = d.stats || {};
+    log.textContent += `✅ ${s.ok ?? 0} bundles ${start ? 'en promo' : 'restaurados'}\n`;
+    if (s.errors?.length) s.errors.forEach(e => log.textContent += `⚠️ ${e}\n`);
+    toast(start ? `Promo activada en ${s.ok} bundles` : `Promo terminada en ${s.ok} bundles`, 'success');
+    loadBundles();
+  } catch(e) {
+    log.textContent += `❌ Error: ${e.message}\n`;
+    toast('Error al gestionar promo', 'error');
+  } finally { btn.disabled = false; }
+}
+
+// ── Combos ────────────────────────────────────────────────────────────────────
+let allBundles = [];
+let selectedComboIds = new Set();
+
+async function loadComboBundles() {
+  const container = document.getElementById('combo-bundle-list');
+  try {
+    const r = await fetch(`${API}/bundles/`);
+    allBundles = await r.json();
+    const active = allBundles.filter(b => ['active','promo'].includes(b.ml_status));
+    if (!active.length) {
+      container.innerHTML = '<span style="color:#aaa;font-size:13px">No hay bundles activos.</span>';
+      return;
+    }
+    container.innerHTML = active.map(b => `
+      <label style="cursor:pointer;display:flex;align-items:center;gap:6px;background:white;border:1.5px solid #ddd;border-radius:6px;padding:6px 12px;font-size:13px;transition:all .15s"
+             id="combo-label-${b.id}">
+        <input type="checkbox" value="${b.id}" onchange="toggleCombo(${b.id}, this)" style="cursor:pointer">
+        <span>${b.tags || b.name.replace(/Pack Digital |Pack /gi,'').slice(0,30)}</span>
+        <span style="color:#aaa;font-size:11px">(${b.image_count} imgs)</span>
+      </label>`).join('');
+  } catch {
+    container.innerHTML = '<span style="color:#e74c3c;font-size:13px">Error al cargar bundles</span>';
+  }
+}
+
+function toggleCombo(id, checkbox) {
+  const label = document.getElementById(`combo-label-${id}`);
+  if (checkbox.checked) {
+    selectedComboIds.add(id);
+    label.style.borderColor = '#3483FA';
+    label.style.background = '#e8f4fd';
+  } else {
+    selectedComboIds.delete(id);
+    label.style.borderColor = '#ddd';
+    label.style.background = 'white';
+  }
+}
+
+async function createCombo() {
+  if (selectedComboIds.size < 2) {
+    toast('Seleccioná al menos 2 bundles para el combo', 'error');
+    return;
+  }
+  const btn = document.getElementById('btn-combo');
+  const log = document.getElementById('combo-log');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Creando...';
+  log.style.display = 'block';
+  log.textContent = '▶ Creando mega pack combo...\n';
+  try {
+    const ids = Array.from(selectedComboIds);
+    const params = ids.map(id => `bundle_ids=${id}`).join('&');
+    const r = await fetch(`${API}/admin/combo?${params}&auto_publish=true`, { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      log.textContent += `✅ Mega Pack creado!\n`;
+      log.textContent += `   Total imágenes: ${d.images}\n`;
+      log.textContent += `   Precio combo: $${d.price?.toLocaleString('es-AR')}\n`;
+      log.textContent += `   ML ID: ${d.ml_item_id || 'publicando...'}\n`;
+      toast(`Mega Pack publicado! $${d.price?.toLocaleString('es-AR')}`, 'success');
+      selectedComboIds.clear();
+      document.querySelectorAll('#combo-bundle-list input[type=checkbox]').forEach(cb => cb.checked = false);
+      document.querySelectorAll('[id^=combo-label-]').forEach(l => { l.style.borderColor='#ddd'; l.style.background='white'; });
+      loadBundles();
+    } else {
+      log.textContent += `❌ Error: ${d.error}\n`;
+      toast('Error al crear combo: ' + d.error, 'error');
+    }
+  } catch(e) {
+    log.textContent += `❌ Error: ${e.message}\n`;
+    toast('Error al crear combo', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ Crear Mega Pack';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+checkAuth();
+loadBundles();
+loadComboBundles();
+buildCalcTable();
+setInterval(checkAuth, 60000);
+</script>
+</body>
+</html>
