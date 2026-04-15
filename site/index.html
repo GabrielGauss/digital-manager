@@ -1130,12 +1130,17 @@ async function updateImages() {
   btn.innerHTML = '<span class="spinner"></span> Actualizando...';
   try {
     const r = await fetch(`${API}/admin/update-images`, { method:'POST' });
+    if (!r.ok) {
+      const text = await r.text();
+      toast(`Error ${r.status}: ${text.slice(0, 120)}`, 'error');
+      return;
+    }
     const d = await r.json();
     const s = d.stats || {};
     const msg = `${s.updated || 0} actualizados, ${s.skipped || 0} sin cambios`;
     if (s.errors?.length) toast(msg + ` (${s.errors.length} errores)`, 'error');
     else toast(msg, 'success');
-  } catch { toast('Error al actualizar imágenes', 'error'); }
+  } catch(e) { toast('Error al actualizar imágenes: ' + e.message, 'error'); }
   finally { btn.disabled = false; btn.innerHTML = 'Actualizar imágenes → ML'; }
 }
 
