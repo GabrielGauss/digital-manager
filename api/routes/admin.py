@@ -266,9 +266,10 @@ async def import_from_ml(db: AsyncSession = Depends(get_db)):
     async with httpx.AsyncClient(timeout=30) as client:
         r = await client.get(
             f"https://api.mercadolibre.com/users/{seller_id}/items/search",
-            params={"status": "active", "limit": 100},
+            params={"limit": 100},
             headers={"Authorization": f"Bearer {access_token}"},
         )
+        logger.info(f"[import-ml] seller_id={seller_id} status={r.status_code} body={r.text[:300]}")
         r.raise_for_status()
         item_ids = r.json().get("results", [])
 
