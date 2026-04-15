@@ -316,6 +316,7 @@ async def import_from_ml(db: AsyncSession = Depends(get_db)):
 @router.post("/update-images")
 async def update_all_images(db: AsyncSession = Depends(get_db)):
     """Push preview + brand images to all ML listings that have an ml_item_id."""
+    return {"status": "ping", "ok": True}
     import traceback
     from services.drive import download_preview_images
 
