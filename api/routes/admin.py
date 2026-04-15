@@ -341,8 +341,24 @@ async def update_all_images(db: AsyncSession = Depends(get_db)):
                 stats["skipped"] += 1
                 continue
 
-            # Only brand images for now (Drive preview download is slow / sync)
-            picture_ids = list(brand_ids)
+            picture_ids = []
+
+            # Drive preview images — run in thread pool so we don't block the event loop
+            if bundle.drive_folder_id:
+                import asyncio
+                from services.drive import download_preview_images
+                try:
+                    previews = await asyncio.to_thread(
+                        download_preview_images, bundle.drive_folder_id, 5
+                    )
+                    for img_bytes, mime_type in previews:
+                        pid = await ml.upload_picture_bytes(img_bytes, mime_type, access_token)
+                        if pid:
+                            picture_ids.append(pid)
+                except Exception as e:
+                    stats["errors"].append(f"{bundle.name} drive: {str(e)[:60]}")
+
+            picture_ids.extend(brand_ids)
 
             if not picture_ids:
                 stats["skipped"] += 1
