@@ -315,12 +315,10 @@ async def import_from_ml(db: AsyncSession = Depends(get_db)):
 
 @router.post("/update-images")
 async def update_all_images(db: AsyncSession = Depends(get_db)):
-    """Push preview + brand images to all ML listings that have an ml_item_id."""
-    return {"status": "ping", "ok": True}
+    """Push brand images (+ Drive previews when available) to all ML listings."""
     import traceback
-    from services.drive import download_preview_images
 
-    stats: dict = {"updated": 0, "skipped": 0, "errors": [], "step": "init"}
+    stats = {"updated": 0, "skipped": 0, "errors": [], "step": "init"}
     try:
         stats["step"] = "get_token"
         access_token = await ml.get_valid_token(db)
@@ -343,19 +341,8 @@ async def update_all_images(db: AsyncSession = Depends(get_db)):
                 stats["skipped"] += 1
                 continue
 
-            picture_ids: list[str] = []
-
-            if bundle.drive_folder_id:
-                try:
-                    previews = download_preview_images(bundle.drive_folder_id, count=5)
-                    for img_bytes, mime_type in previews:
-                        pid = await ml.upload_picture_bytes(img_bytes, mime_type, access_token)
-                        if pid:
-                            picture_ids.append(pid)
-                except Exception as e:
-                    stats["errors"].append(f"{bundle.name} drive: {str(e)[:60]}")
-
-            picture_ids.extend(brand_ids)
+            # Only brand images for now (Drive preview download is slow / sync)
+            picture_ids = list(brand_ids)
 
             if not picture_ids:
                 stats["skipped"] += 1
