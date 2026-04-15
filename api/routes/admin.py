@@ -320,9 +320,19 @@ async def update_all_images(db: AsyncSession = Depends(get_db)):
     Run this once to push images to listings that were created before
     the multi-image pipeline was in place.
     """
+    import traceback
     from services.drive import download_preview_images
 
     stats = {"updated": 0, "skipped": 0, "errors": []}
+    try:
+        return await _do_update_images(db, stats, download_preview_images)
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"[update-images] Unhandled: {e}\n{tb}")
+        return {"status": "error", "detail": str(e), "trace": tb[-600:], "stats": stats}
+
+
+async def _do_update_images(db, stats, download_preview_images):
 
     try:
         access_token = await ml.get_valid_token(db)
