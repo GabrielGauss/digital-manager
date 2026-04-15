@@ -22,8 +22,8 @@ def _write_google_credentials():
     The token auto-refreshes during the session; on next restart the env var
     is written again (refresh_token stays valid permanently).
     """
-    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
-    token_json = os.getenv("GOOGLE_TOKEN_JSON")
+    creds_json = os.getenv("GOOGLE_CREDS_DATA")
+    token_json = os.getenv("GOOGLE_TOKEN_DATA")
 
     from config import GOOGLE_CREDENTIALS_FILE, GOOGLE_TOKEN_FILE
 
