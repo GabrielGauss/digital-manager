@@ -322,18 +322,24 @@ async def update_all_images(db: AsyncSession = Depends(get_db)):
     """
     from services.drive import download_preview_images
 
-    access_token = await ml.get_valid_token(db)
-    result = await db.execute(select(Bundle).where(Bundle.ml_item_id.isnot(None)))
-    bundles = result.scalars().all()
-
     stats = {"updated": 0, "skipped": 0, "errors": []}
+
+    try:
+        access_token = await ml.get_valid_token(db)
+    except Exception as e:
+        return {"status": "error", "detail": f"ML auth failed: {e}", "stats": stats}
+
+    result = await db.execute(select(Bundle))
+    bundles = result.scalars().all()
 
     # Upload brand images once; reuse across all listings
     try:
         brand_ids = await ml.get_brand_picture_ids(access_token)
+        logger.info(f"[update-images] {len(brand_ids)} brand image(s) ready")
     except Exception as e:
         brand_ids = []
         logger.warning(f"[update-images] Could not upload brand images: {e}")
+        stats["errors"].append(f"brand images: {str(e)[:80]}")
 
     for bundle in bundles:
         if not bundle.ml_item_id:
@@ -350,8 +356,10 @@ async def update_all_images(db: AsyncSession = Depends(get_db)):
                     pid = await ml.upload_picture_bytes(img_bytes, mime_type, access_token)
                     if pid:
                         picture_ids.append(pid)
+                logger.info(f"[update-images] {len(picture_ids)} preview(s) for {bundle.name}")
             except Exception as e:
                 logger.warning(f"[update-images] Preview upload failed for {bundle.name}: {e}")
+                stats["errors"].append(f"{bundle.name} previews: {str(e)[:60]}")
 
         picture_ids.extend(brand_ids)
 
@@ -366,7 +374,7 @@ async def update_all_images(db: AsyncSession = Depends(get_db)):
                 access_token,
             )
             stats["updated"] += 1
-            logger.info(f"[update-images] Updated {bundle.name} with {len(picture_ids)} images")
+            logger.info(f"[update-images] Updated {bundle.name} ({bundle.ml_item_id}) — {len(picture_ids)} imgs")
         except Exception as e:
             stats["errors"].append(f"{bundle.ml_item_id}: {str(e)[:80]}")
 
