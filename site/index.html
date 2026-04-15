@@ -310,12 +310,12 @@
         </div>
 
         <div class="card" style="background:#fff8f0;border:1px solid #ff6b00">
-          <div style="font-weight:700;font-size:16px;margin-bottom:6px">Corregir envío en ML</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:6px">Importar listings de ML + corregir envío</div>
           <div style="font-size:13px;color:#666;margin-bottom:16px">
-            Quita las opciones de envío físico de todos los listings. Ejecutar una sola vez para los listings existentes.
+            Importa todos tus listings activos de ML a la base de datos y les corrige el envío (sin físico). Ejecutar una sola vez.
           </div>
-          <button class="btn btn-sm" style="background:#ff6b00;color:#fff" onclick="fixShipping()" id="btn-fix-shipping">
-            Corregir envío → ML
+          <button class="btn btn-sm" style="background:#ff6b00;color:#fff" onclick="importFromML()" id="btn-import-ml">
+            Importar de ML + corregir envío
           </button>
         </div>
       </div>
@@ -1103,20 +1103,21 @@ async function syncPrices() {
   finally { btn.disabled = false; btn.innerHTML = 'Sincronizar precios → ML'; }
 }
 
-// ── Fix shipping ──────────────────────────────────────────────────────────────
-async function fixShipping() {
-  const btn = document.getElementById('btn-fix-shipping');
+// ── Import from ML + fix shipping ─────────────────────────────────────────────
+async function importFromML() {
+  const btn = document.getElementById('btn-import-ml');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>';
   try {
-    const r = await fetch(`${API}/admin/fix-shipping`, { method:'POST' });
+    const r = await fetch(`${API}/admin/import-from-ml`, { method:'POST' });
     const d = await r.json();
     const s = d.stats || {};
-    const msg = `Envío corregido en ${s.fixed || 0} listings`;
+    const msg = `${s.imported || 0} importados, ${s.shipping_fixed || 0} con envío corregido`;
     if (s.errors?.length) toast(msg + ` (${s.errors.length} errores)`, 'error');
     else toast(msg, 'success');
-  } catch { toast('Error al corregir envío', 'error'); }
-  finally { btn.disabled = false; btn.innerHTML = 'Corregir envío → ML'; }
+    loadBundles();
+  } catch { toast('Error al importar', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = 'Importar de ML + corregir envío'; }
 }
 
 // ── Calculator ────────────────────────────────────────────────────────────────

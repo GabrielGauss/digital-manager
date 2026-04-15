@@ -246,3 +246,64 @@ async def fix_all_shipping(db: AsyncSession = Depends(get_db)):
             stats["errors"].append(f"{bundle.ml_item_id}: {str(e)[:80]}")
 
     return {"status": "done", "stats": stats}
+
+
+# ── Import existing ML listings into DB + fix shipping ─────────────────────────
+
+@router.post("/import-from-ml")
+async def import_from_ml(db: AsyncSession = Depends(get_db)):
+    """
+    Fetch all active listings from ML, register them in the DB,
+    and immediately fix their shipping to custom (no physical delivery).
+    Run this once after a fresh DB to sync existing published items.
+    """
+    from services.ml_messages import get_seller_id
+    access_token = await ml.get_valid_token(db)
+    seller_id = await get_seller_id(access_token)
+
+    stats = {"imported": 0, "already_exists": 0, "shipping_fixed": 0, "errors": []}
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.get(
+            f"https://api.mercadolibre.com/users/{seller_id}/items/search",
+            params={"status": "active", "limit": 100},
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        r.raise_for_status()
+        item_ids = r.json().get("results", [])
+
+        for item_id in item_ids:
+            existing = await db.execute(select(Bundle).where(Bundle.ml_item_id == item_id))
+            if existing.scalar_one_or_none():
+                stats["already_exists"] += 1
+            else:
+                ir = await client.get(
+                    f"https://api.mercadolibre.com/items/{item_id}",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+                if ir.status_code != 200:
+                    stats["errors"].append(f"{item_id}: fetch failed {ir.status_code}")
+                    continue
+                item = ir.json()
+                bundle = Bundle(
+                    name=item.get("title", item_id),
+                    description="",
+                    price=float(item.get("price", 0)),
+                    image_count=0,
+                    drive_folder_id="",
+                    drive_folder_url="",
+                    ml_item_id=item_id,
+                    ml_status="active",
+                )
+                db.add(bundle)
+                stats["imported"] += 1
+                logger.info(f"[import-ml] Registered {item.get('title')} ({item_id})")
+
+            try:
+                await ml.fix_shipping(item_id, access_token)
+                stats["shipping_fixed"] += 1
+            except Exception as e:
+                stats["errors"].append(f"{item_id} shipping: {str(e)[:60]}")
+
+    await db.commit()
+    return {"status": "done", "stats": stats}
