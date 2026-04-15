@@ -309,3 +309,65 @@ async def import_from_ml(db: AsyncSession = Depends(get_db)):
 
     await db.commit()
     return {"status": "done", "stats": stats}
+
+
+# ── Update images on existing listings ────────────────────────────────────────
+
+@router.post("/update-images")
+async def update_all_images(db: AsyncSession = Depends(get_db)):
+    """
+    Re-upload preview + brand images to all active ML listings.
+    Run this once to push images to listings that were created before
+    the multi-image pipeline was in place.
+    """
+    from services.drive import download_preview_images
+
+    access_token = await ml.get_valid_token(db)
+    result = await db.execute(select(Bundle).where(Bundle.ml_item_id.isnot(None)))
+    bundles = result.scalars().all()
+
+    stats = {"updated": 0, "skipped": 0, "errors": []}
+
+    # Upload brand images once; reuse across all listings
+    try:
+        brand_ids = await ml.get_brand_picture_ids(access_token)
+    except Exception as e:
+        brand_ids = []
+        logger.warning(f"[update-images] Could not upload brand images: {e}")
+
+    for bundle in bundles:
+        if not bundle.ml_item_id:
+            stats["skipped"] += 1
+            continue
+
+        picture_ids = []
+
+        # Preview images from Drive (skip if no drive folder set)
+        if bundle.drive_folder_id:
+            try:
+                previews = download_preview_images(bundle.drive_folder_id, count=5)
+                for img_bytes, mime_type in previews:
+                    pid = await ml.upload_picture_bytes(img_bytes, mime_type, access_token)
+                    if pid:
+                        picture_ids.append(pid)
+            except Exception as e:
+                logger.warning(f"[update-images] Preview upload failed for {bundle.name}: {e}")
+
+        picture_ids.extend(brand_ids)
+
+        if not picture_ids:
+            stats["skipped"] += 1
+            continue
+
+        try:
+            await ml.update_listing(
+                bundle.ml_item_id,
+                {"pictures": [{"id": pid} for pid in picture_ids[:12]]},
+                access_token,
+            )
+            stats["updated"] += 1
+            logger.info(f"[update-images] Updated {bundle.name} with {len(picture_ids)} images")
+        except Exception as e:
+            stats["errors"].append(f"{bundle.ml_item_id}: {str(e)[:80]}")
+
+    return {"status": "done", "stats": stats}

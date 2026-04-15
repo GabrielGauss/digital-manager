@@ -317,6 +317,9 @@
           <button class="btn btn-sm" style="background:#ff6b00;color:#fff" onclick="importFromML()" id="btn-import-ml">
             Importar de ML + corregir envío
           </button>
+          <button class="btn btn-sm" style="background:#7c3aed;color:#fff;margin-top:8px" onclick="updateImages()" id="btn-update-images">
+            Actualizar imágenes → ML
+          </button>
         </div>
       </div>
 
@@ -1118,6 +1121,22 @@ async function importFromML() {
     loadBundles();
   } catch { toast('Error al importar', 'error'); }
   finally { btn.disabled = false; btn.innerHTML = 'Importar de ML + corregir envío'; }
+}
+
+// ── Update images on all listings ─────────────────────────────────────────────
+async function updateImages() {
+  const btn = document.getElementById('btn-update-images');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Actualizando...';
+  try {
+    const r = await fetch(`${API}/admin/update-images`, { method:'POST' });
+    const d = await r.json();
+    const s = d.stats || {};
+    const msg = `${s.updated || 0} actualizados, ${s.skipped || 0} sin cambios`;
+    if (s.errors?.length) toast(msg + ` (${s.errors.length} errores)`, 'error');
+    else toast(msg, 'success');
+  } catch { toast('Error al actualizar imágenes', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = 'Actualizar imágenes → ML'; }
 }
 
 // ── Calculator ────────────────────────────────────────────────────────────────
