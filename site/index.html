@@ -308,6 +308,16 @@
             Sincronizar precios → ML
           </button>
         </div>
+
+        <div class="card" style="background:#fff8f0;border:1px solid #ff6b00">
+          <div style="font-weight:700;font-size:16px;margin-bottom:6px">Corregir envío en ML</div>
+          <div style="font-size:13px;color:#666;margin-bottom:16px">
+            Quita las opciones de envío físico de todos los listings. Ejecutar una sola vez para los listings existentes.
+          </div>
+          <button class="btn btn-sm" style="background:#ff6b00;color:#fff" onclick="fixShipping()" id="btn-fix-shipping">
+            Corregir envío → ML
+          </button>
+        </div>
       </div>
 
       <!-- Promos -->
@@ -1091,6 +1101,22 @@ async function syncPrices() {
     loadBundles();
   } catch { toast('Error al sincronizar precios', 'error'); }
   finally { btn.disabled = false; btn.innerHTML = 'Sincronizar precios → ML'; }
+}
+
+// ── Fix shipping ──────────────────────────────────────────────────────────────
+async function fixShipping() {
+  const btn = document.getElementById('btn-fix-shipping');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const r = await fetch(`${API}/admin/fix-shipping`, { method:'POST' });
+    const d = await r.json();
+    const s = d.stats || {};
+    const msg = `Envío corregido en ${s.fixed || 0} listings`;
+    if (s.errors?.length) toast(msg + ` (${s.errors.length} errores)`, 'error');
+    else toast(msg, 'success');
+  } catch { toast('Error al corregir envío', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = 'Corregir envío → ML'; }
 }
 
 // ── Calculator ────────────────────────────────────────────────────────────────
