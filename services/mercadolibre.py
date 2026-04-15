@@ -21,14 +21,19 @@ def get_auth_url() -> str:
 
 
 async def exchange_code_for_token(code: str, db: AsyncSession) -> dict:
+    import logging
+    logger = logging.getLogger(__name__)
     async with httpx.AsyncClient() as client:
-        response = await client.post(ML_TOKEN_URL, data={
+        payload = {
             "grant_type": "authorization_code",
             "client_id": ML_APP_ID,
             "client_secret": ML_CLIENT_SECRET,
             "code": code,
             "redirect_uri": ML_REDIRECT_URI,
-        })
+        }
+        logger.info(f"[ML auth] Exchanging code, redirect_uri={ML_REDIRECT_URI}")
+        response = await client.post(ML_TOKEN_URL, data=payload)
+        logger.info(f"[ML auth] Token response {response.status_code}: {response.text}")
         response.raise_for_status()
         data = response.json()
 
