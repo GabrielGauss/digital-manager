@@ -218,3 +218,31 @@ async def sync_all_prices(db: AsyncSession = Depends(get_db)):
 
     await db.commit()
     return {"status": "done", "stats": stats}
+
+
+# ── Fix shipping on all listings ───────────────────────────────────────────────
+
+@router.post("/fix-shipping")
+async def fix_all_shipping(db: AsyncSession = Depends(get_db)):
+    """
+    Update all published ML listings to shipping mode = not_specified.
+    Removes the physical shipping options that confuse buyers of digital products.
+    """
+    access_token = await ml.get_valid_token(db)
+    result = await db.execute(select(Bundle))
+    bundles = result.scalars().all()
+
+    stats = {"fixed": 0, "skipped": 0, "errors": []}
+
+    for bundle in bundles:
+        if not bundle.ml_item_id:
+            stats["skipped"] += 1
+            continue
+        try:
+            await ml.fix_shipping(bundle.ml_item_id, access_token)
+            stats["fixed"] += 1
+            logger.info(f"[fix-shipping] {bundle.name} ({bundle.ml_item_id}) updated")
+        except Exception as e:
+            stats["errors"].append(f"{bundle.ml_item_id}: {str(e)[:80]}")
+
+    return {"status": "done", "stats": stats}

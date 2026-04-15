@@ -55,31 +55,30 @@ def promo_original_price(image_count: int) -> float:
 # ── Description templates ─────────────────────────────────────────────────────
 def auto_description(folder_name: str, image_count: int) -> str:
     clean = folder_name.lstrip("0123456789- ").strip()
-    return f"""🖼️ PACK DIGITAL - {clean.upper()} | {image_count} IMÁGENES PARA IMPRIMIR
+    return f"""PRODUCTO DIGITAL — NO SE ENVÍA NADA FÍSICO. Recibís el link de descarga por mensaje de MercadoLibre y por email al instante de acreditarse el pago.
 
-✅ ¿QUÉ INCLUYE?
-• {image_count} imágenes de alta calidad en formato JPG/PNG
-• Listas para imprimir en cualquier tamaño (A4, A3, 30x40, 50x70 y más)
-• Descarga instantánea vía Google Drive
+QUÉ INCLUYE
+{image_count} imágenes de alta resolución en formato JPG/PNG, listas para imprimir en cualquier tamaño: A4, A3, 30x40, 50x70 cm y más. Todas las imágenes son de uso personal.
 
-🎨 ESTILO
-Pack temático de {clean} seleccionado a mano. Ideal para decoración del hogar, regalo, oficinas y espacios modernos.
+CÓMO FUNCIONA
+1. Comprás el pack
+2. En minutos recibís un mensaje por MercadoLibre y un email con el link de Google Drive
+3. Abrís el link y descargás todas las imágenes
+4. Llevás el archivo a cualquier imprenta o imprimís en casa
 
-📦 CÓMO FUNCIONA
-1. Realizá tu compra
-2. Recibís un email con el link de descarga en minutos
-3. Descargás las imágenes desde Google Drive
-4. ¡Imprimís donde quieras!
+ACCESO DE POR VIDA — el link no vence, podés descargar cuando quieras.
 
-🖨️ FORMATOS RECOMENDADOS PARA IMPRIMIR
-• A4 (21×29.7 cm) — cualquier imprenta o en casa
-• A3 (30×42 cm) — para mayor impacto
-• 30×40 / 40×60 cm — marcos estándar
+ESTILO
+Pack temático {clean} seleccionado a mano. Ideal para decorar el hogar, regalo, oficinas y espacios modernos.
 
-⚡ ENTREGA INMEDIATA — sin espera, sin envío físico
-💬 Ante cualquier consulta, respondemos rápido.
+FORMATOS PARA IMPRIMIR
+A4 (21x29.7 cm) — impresora hogareña o imprenta
+A3 (30x42 cm) — mayor impacto visual
+30x40 / 40x60 cm — marcos estándar de fotocopiadoras
 
-Palabras clave: impresión digital, arte para imprimir, poster digital, decoración, {clean.lower()}, lámina digital, cuadro digital"""
+Ante cualquier consulta respondemos rápido por el chat de MercadoLibre.
+
+impresion digital arte para imprimir poster digital decoracion {clean.lower()} lamina digital cuadro digital"""
 
 
 # ── ML listing title ──────────────────────────────────────────────────────────
