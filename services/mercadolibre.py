@@ -123,9 +123,10 @@ async def create_listing(bundle: dict, access_token: str) -> dict:
         # Buyers still pay normally; they just can't split in cuotas at our cost.
         "tags": ["immediate_payment"],
         "shipping": {
-            "mode": "not_specified",
+            "mode": "custom",
             "local_pick_up": False,
             "free_shipping": False,
+            "methods": [],
         },
         "sale_terms": [
             {"id": "WARRANTY_TYPE", "value_id": "6150835"},
@@ -168,12 +169,13 @@ async def update_listing(ml_item_id: str, updates: dict, access_token: str) -> d
 
 
 async def fix_shipping(ml_item_id: str, access_token: str) -> dict:
-    """Set shipping to not_specified (digital product — no physical delivery)."""
+    """Set shipping to custom/acuerdo con vendedor (digital product — no physical delivery)."""
     return await update_listing(ml_item_id, {
         "shipping": {
-            "mode": "not_specified",
+            "mode": "custom",
             "local_pick_up": False,
             "free_shipping": False,
+            "methods": [],
         }
     }, access_token)
 
