@@ -702,7 +702,7 @@ function bundleCard(b) {
     : '';
 
   const mlLink = b.ml_item_id
-    ? `<a href="https://www.mercadolibre.com.ar/p/${b.ml_item_id}" target="_blank" class="btn btn-outline btn-sm">Ver en ML</a>`
+    ? `<a href="https://articulo.mercadolibre.com.ar/${b.ml_item_id.replace('MLA','MLA-')}" target="_blank" class="btn btn-outline btn-sm">Ver en ML</a>`
     : '';
 
   return `
