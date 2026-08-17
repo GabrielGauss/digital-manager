@@ -179,26 +179,34 @@ async def publish_all_drafts(db: AsyncSession) -> dict:
 async def _publish_bundle(bundle: Bundle, db: AsyncSession) -> bool:
     try:
         access_token = await ml.get_valid_token(db)
+        picture_ids = []
 
-        # Upload cover image from Drive
-        ml_picture_id = None
+        # Upload 4-5 preview images from Drive folder (recursive — handles subfolders)
         try:
-            from services.drive import download_first_image_bytes
-            result_img = download_first_image_bytes(bundle.drive_folder_id)
-            if result_img:
-                img_bytes, mime_type = result_img
-                ml_picture_id = await ml.upload_picture_bytes(img_bytes, mime_type, access_token)
-                logger.info(f"[sync] Uploaded picture: {ml_picture_id}")
+            from services.drive import download_preview_images
+            previews = download_preview_images(bundle.drive_folder_id, count=5)
+            for img_bytes, mime_type in previews:
+                pid = await ml.upload_picture_bytes(img_bytes, mime_type, access_token)
+                if pid:
+                    picture_ids.append(pid)
+            logger.info(f"[sync] Uploaded {len(picture_ids)} preview images for {bundle.name}")
         except Exception as e:
-            logger.warning(f"[sync] Could not upload picture for {bundle.name}: {e}")
+            logger.warning(f"[sync] Could not upload preview images for {bundle.name}: {e}")
+
+        # Append brand images (img2-nudo, img1-nudo, logo-nudo) at the end
+        try:
+            brand_ids = await ml.get_brand_picture_ids(access_token)
+            picture_ids.extend(brand_ids)
+            logger.info(f"[sync] Added {len(brand_ids)} brand images")
+        except Exception as e:
+            logger.warning(f"[sync] Could not upload brand images: {e}")
 
         result = await ml.create_listing({
             "name": bundle.name,
             "description": bundle.description,
             "price": bundle.price,
             "image_count": bundle.image_count,
-            "cover_image_url": bundle.cover_image_url,
-            "ml_picture_id": ml_picture_id,
+            "picture_ids": picture_ids,
         }, access_token)
         bundle.ml_item_id = result["id"]
         bundle.ml_status = "active"

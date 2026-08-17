@@ -1,9 +1,13 @@
 import httpx
+import os
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database.models import MLToken
 from config import ML_APP_ID, ML_CLIENT_SECRET, ML_REDIRECT_URI, ML_SITE_ID
+
+# Brand images uploaded once per process lifetime and reused across all listings
+_BRAND_PICTURE_IDS: list[str] = []
 
 ML_BASE_URL = "https://api.mercadolibre.com"
 ML_AUTH_URL = "https://auth.mercadolibre.com.ar/authorization"
@@ -142,10 +146,12 @@ async def create_listing(bundle: dict, access_token: str) -> dict:
         "description": {"plain_text": bundle["description"]},
     }
 
-    # Attach picture if provided
-    picture_id = bundle.get("ml_picture_id")
-    if picture_id:
-        payload["pictures"] = [{"id": picture_id}]
+    # Attach pictures — preview images first, brand images at the end
+    picture_ids = bundle.get("picture_ids") or []
+    if bundle.get("ml_picture_id") and bundle["ml_picture_id"] not in picture_ids:
+        picture_ids = [bundle["ml_picture_id"]] + picture_ids
+    if picture_ids:
+        payload["pictures"] = [{"id": pid} for pid in picture_ids[:12]]  # ML max 12
 
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.post(
@@ -241,6 +247,37 @@ async def apply_immediate_payment(ml_item_id: str, access_token: str) -> bool:
     except Exception as e:
         print(f"[ml] Failed to apply immediate_payment to {ml_item_id}: {e}")
         return False
+
+
+async def get_brand_picture_ids(access_token: str) -> list[str]:
+    """
+    Upload the 3 brand images (img2-nudo, img1-nudo, logo-nudo) to ML once
+    and cache their IDs for the lifetime of the process.
+    Order: how-it-works card, size guide, logo.
+    """
+    global _BRAND_PICTURE_IDS
+    if _BRAND_PICTURE_IDS:
+        return _BRAND_PICTURE_IDS
+
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    brand_files = [
+        ("img2-nudo.png", "image/png"),
+        ("img1-nudo.webp", "image/webp"),
+        ("logo-nudo.png", "image/png"),
+    ]
+    ids = []
+    for filename, mime_type in brand_files:
+        path = os.path.join(base_dir, filename)
+        if not os.path.exists(path):
+            continue
+        with open(path, "rb") as f:
+            data = f.read()
+        pid = await upload_picture_bytes(data, mime_type, access_token)
+        if pid:
+            ids.append(pid)
+
+    _BRAND_PICTURE_IDS = ids
+    return ids
 
 
 async def upload_picture_bytes(image_bytes: bytes, mime_type: str, access_token: str) -> str | None:
